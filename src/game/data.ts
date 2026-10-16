@@ -171,7 +171,7 @@ export function createWorld(playerId: NationId): Game {
       });
     });
     FACILITY_PLAN.forEach((f, i) => {
-      const c = def.cities[f.city % def.cities.length];
+      const c = def.cities[f.city % def.cities.length]!;
       facilities.push({
         id: `${id}-f${i}`,
         nation: id,

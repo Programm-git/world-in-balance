@@ -491,9 +491,9 @@ function aiTurn(g: Game, n: Nation) {
     const sum = weights.reduce((a, b) => a + b, 0);
     let r = rand() * sum;
     for (let i = 0; i < others.length; i++) {
-      r -= weights[i];
+      r -= weights[i]!;
       if (r <= 0) {
-        declareWar(g, n.id, others[i].id);
+        declareWar(g, n.id, others[i]!.id);
         break;
       }
     }
@@ -651,7 +651,7 @@ export function step(g: Game) {
       }
     } else if (!n.isPlayer && rand() < 0.01) {
       const keys = Object.keys(n.research) as ResearchKey[];
-      const k = keys[Math.floor(rand() * keys.length)];
+      const k = keys[Math.floor(rand() * keys.length)]!;
       if (n.research[k] < MAX_RESEARCH && n.energy > researchCost(n.research[k])) {
         n.energy -= researchCost(n.research[k]);
         n.researching = { key: k, remaining: researchTicks(n.research[k]), total: researchTicks(n.research[k]) };
