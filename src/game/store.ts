@@ -76,14 +76,10 @@ export function startLoop() {
       acc += dt * s.speed;
       let stepped = false;
       while (acc >= 1) {
-        const before = g.blasts.length;
         step(g);
         acc -= 1;
         stepped = true;
-        const fresh = g.blasts.slice(0, Math.max(0, g.blasts.length)).filter((b) => b.t === g.tick);
-        if (g.blasts.length >= before && fresh.length) {
-          for (const b of fresh) audio.boom(b.nuclear, !!b.intercepted);
-        }
+        for (const b of g.blasts) if (b.t === g.tick) audio.boom(b.nuclear, !!b.intercepted);
       }
       clock.t = g.tick + acc;
       if (stepped) useGame.setState({ ver: s.ver + 1 });
