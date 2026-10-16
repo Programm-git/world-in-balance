@@ -100,8 +100,8 @@ function Borders() {
     const pts: number[] = [];
     for (const line of borders as number[][]) {
       for (let i = 0; i + 3 < line.length; i += 2) {
-        const a = ll(line[i + 1], line[i], 1.002);
-        const b = ll(line[i + 3], line[i + 2], 1.002);
+        const a = ll(line[i + 1]!, line[i]!, 1.002);
+        const b = ll(line[i + 3]!, line[i + 2]!, 1.002);
         pts.push(a.x, a.y, a.z, b.x, b.y, b.z);
       }
     }
@@ -357,8 +357,8 @@ function FlightPath({ f, color }: { f: Flight; color: string }) {
     const p = Math.min(1, Math.max(0, (clock.t - f.launchT) / Math.max(1, f.arriveT - f.launchT)));
     const idx = Math.min(SEG - 1, Math.floor(p * SEG));
     if (head.current) {
-      head.current.position.lerpVectors(pts[idx], pts[idx + 1], p * SEG - idx);
-      head.current.lookAt(pts[idx + 1]);
+      head.current.position.lerpVectors(pts[idx]!, pts[idx + 1]!, p * SEG - idx);
+      head.current.lookAt(pts[idx + 1]!);
       head.current.rotateX(Math.PI / 2);
     }
   });

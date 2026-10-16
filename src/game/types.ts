@@ -122,7 +122,7 @@ export interface QueueItem {
   kind: QueueItemKind;
   remaining: number;
   total: number;
-  cityId?: string;
+  cityId?: string | undefined;
 }
 
 export interface Offer {
