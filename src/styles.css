@@ -142,3 +142,46 @@
     color: var(--color-foreground);
   }
 }
+
+:root {
+  --background: oklch(0.13 0.015 230);
+  --foreground: oklch(0.9 0.02 200);
+  --card: oklch(0.17 0.018 230);
+  --card-foreground: oklch(0.9 0.02 200);
+  --muted: oklch(0.24 0.02 230);
+  --muted-foreground: oklch(0.62 0.03 210);
+  --border: oklch(0.32 0.03 210);
+  --primary: oklch(0.8 0.15 75);
+  --primary-foreground: oklch(0.15 0.02 230);
+  --hud-amber: oklch(0.8 0.15 75);
+  --hud-teal: oklch(0.78 0.11 190);
+  --hud-red: oklch(0.65 0.22 27);
+  --hud-green: oklch(0.78 0.15 155);
+}
+@theme inline {
+  --color-hud-amber: var(--hud-amber);
+  --color-hud-teal: var(--hud-teal);
+  --color-hud-red: var(--hud-red);
+  --color-hud-green: var(--hud-green);
+  --font-display: "Rajdhani", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+.warroom { font-family: var(--font-mono); }
+.hud-panel { background: color-mix(in oklab, var(--card) 90%, transparent); border: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+.hud-title { font-family: var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; font-size: 0.75rem; color: var(--hud-teal); margin-bottom: 0.35rem; }
+.hud-btn { border: 1px solid var(--border); padding: 0.2rem 0.55rem; font-size: 0.72rem; background: var(--background); color: var(--foreground); }
+.hud-btn:hover:not(:disabled) { border-color: var(--hud-amber); }
+.hud-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.hud-btn-on { background: var(--hud-amber); color: var(--primary-foreground); border-color: var(--hud-amber); }
+.hud-btn-danger { border-color: var(--hud-red); color: var(--hud-red); }
+.emergency { flex: 1; border: 2px solid var(--hud-amber); color: var(--hud-amber); font-family: var(--font-display); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: repeating-linear-gradient(45deg, transparent 0 8px, color-mix(in oklab, var(--hud-amber) 12%, transparent) 8px 16px); }
+.emergency-red { border-color: var(--hud-red); color: var(--hud-red); }
+.emergency-on { background: var(--hud-amber); color: var(--primary-foreground); }
+.emergency-red.emergency-on { background: var(--hud-red); color: var(--foreground); }
+.defcon-on { color: var(--primary-foreground); }
+.defcon-on[data-level="5"] { background: var(--hud-teal); }
+.defcon-on[data-level="4"] { background: var(--hud-green); }
+.defcon-on[data-level="3"] { background: var(--hud-amber); }
+.defcon-on[data-level="2"], .defcon-on[data-level="1"] { background: var(--hud-red); }
+.globe-label { font-family: var(--font-mono); font-size: 10px; white-space: nowrap; transform: translateY(-12px); text-shadow: 0 0 4px var(--background); }
+.font-display { font-family: var(--font-display); }
