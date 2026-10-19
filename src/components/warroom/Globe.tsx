@@ -127,6 +127,9 @@ function Dynamic() {
   return (
     <group>
       {g.cities.map((c) => (
+        <Territory key={`t-${c.id}`} c={c} color={g.nations[c.nation].alive ? g.nations[c.nation].color : "#3a3a3a"} capital={c.capital} dead={!g.nations[c.nation].alive} />
+      ))}
+      {g.cities.map((c) => (
         <CityMarker key={c.id} g={g} c={c} labels={layers.civil} selected={selected?.id === c.id} />
       ))}
       {g.facilities.filter(showFac).map((f) => (
@@ -153,6 +156,25 @@ function Dynamic() {
       {g.blasts.map((b, i) => (
         <BlastFx key={`${b.t}-${i}-${b.lat}`} b={b} />
       ))}
+    </group>
+  );
+}
+
+function Territory({ c, color, capital, dead }: { c: City; color: string; capital: boolean; dead: boolean }) {
+  const pos = useMemo(() => ll(c.lat, c.lon, 1.0012), [c.lat, c.lon]);
+  const q = useSurfaceQuat(c.lat, c.lon);
+  const r = capital ? 0.2 : 0.13;
+  return (
+    <group position={pos} quaternion={q}>
+      <mesh rotation-x={-Math.PI / 2}>
+        <circleGeometry args={[r, 40]} />
+        <meshBasicMaterial color={color} transparent opacity={dead ? 0.35 : 0.22} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      {dead && capital && (
+        <Html position={[0, 0.03, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
+          <div className="globe-label" style={{ color: "#ff4b3e" }}>✕ ZERSTÖRT</div>
+        </Html>
+      )}
     </group>
   );
 }
