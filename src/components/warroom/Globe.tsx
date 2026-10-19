@@ -325,8 +325,9 @@ function MissileArc({ m, color }: { m: Missile; color: string }) {
     const idx = Math.floor(p * SEG);
     line.geometry.setDrawRange(0, idx + 1);
     if (head.current) {
-      const a = pts[idx]!;
+      const a = pts[idx];
       const b = pts[Math.min(SEG, idx + 1)];
+      if (!a || !b) return;
       head.current.position.lerpVectors(a, b, p * SEG - idx);
     }
   });
