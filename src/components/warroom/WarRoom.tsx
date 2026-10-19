@@ -253,7 +253,7 @@ function Desk() {
           </div>
           <div role="tabpanel" aria-label={tabs.find((t) => t.key === tab)?.label} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 text-xs">
             {tab === "research" && <Research />}
-            {tab === "military" && <><CommandSection title="Angriffe"><AttackOrders /></CommandSection><CommandSection title="Rüstung & Mobilisierung"><Military /></CommandSection><CommandSection title="Diplomatie"><Diplomacy /></CommandSection><CommandSection title="Lage & Bereitschaft"><RightMonitor /></CommandSection></>}
+            {tab === "military" && <><CommandSection title="Nationen im Spiel"><NationsStatus /></CommandSection><CommandSection title="Bau · Waffenproduktion"><WeaponBuild /></CommandSection><CommandSection title="Angriffe"><AttackOrders /></CommandSection><CommandSection title="Rüstung & Mobilisierung"><Military /></CommandSection><CommandSection title="Diplomatie"><Diplomacy /></CommandSection><CommandSection title="Lage & Bereitschaft"><RightMonitor /></CommandSection></>}
             {tab === "civil" && <><CommandSection title="Evakuierung"><Emergency kind="civil" /></CommandSection><CommandSection title="Bunker ausbauen"><Civil /></CommandSection><CommandSection title="Städte & Bevölkerung"><LeftMonitor /></CommandSection><CommandSection title="Wirtschaft & Infrastruktur"><Economy /></CommandSection></>}
           </div>
         </div>
@@ -265,6 +265,35 @@ function Desk() {
 
 function CommandSection({ title, children }: { title: string; children: React.ReactNode }) {
   return <section><h3 className="hud-title mb-2">{title}</h3>{children}</section>;
+}
+
+function NationsStatus() {
+  useGame((s) => s.ver);
+  const g = useActiveGame();
+  const all = Object.values(g.nations);
+  const alive = all.filter((n) => n.alive).length;
+  return <div className="space-y-2">
+    <div>Noch aktiv: <b className="text-hud-green">{alive}</b> von {all.length} Nationen</div>
+    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+      {all.map((n) => <div key={n.id} className={`flex items-center gap-2 ${n.alive ? "" : "text-muted-foreground line-through"}`}>
+        <span className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: n.alive ? n.color : "#444" }} />
+        <span className="min-w-0 flex-1 truncate">{n.name}{n.id === g.playerId ? " (Sie)" : ""}</span>
+        <span className={n.alive ? "text-hud-green" : "text-hud-red"}>{n.alive ? `${fmt(nationPop(g, n.id), 0)} Mio` : "ZERSTÖRT"}</span>
+      </div>)}
+    </div>
+  </div>;
+}
+
+function WeaponBuild() {
+  useGame((s) => s.ver);
+  const g = useActiveGame();
+  const p = g.nations[g.playerId];
+  const inQueue = g.queue.filter((q) => q.kind === "warhead").length;
+  return <div className="space-y-2">
+    <div className="text-muted-foreground">Vorrat: <b className="text-foreground">{fmt(p.warheads)}</b> Sprengköpfe{inQueue > 0 ? ` · ${inQueue} in Produktion` : ""} · Uran: {fmt(p.uranium)} kg</div>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4"><BuildBtn k="warhead" /><BuildBtn k="interceptor" /><BuildBtn k="bomber" /><BuildBtn k="fighter" /></div>
+    <div className="text-[10px] text-muted-foreground">Uran kommt aus Minen (Zivil → Wirtschaft). Mehr Rüstungswerke = mehr parallele Produktion.</div>
+  </div>;
 }
 
 function AttackOrders() {
