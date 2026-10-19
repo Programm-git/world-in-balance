@@ -3,10 +3,11 @@ import { Html, OrbitControls, Stars } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import borders from "@/game/borders.json";
+import countries from "@/game/countries.json";
 import { arcPoints, ll, slerp } from "@/game/geo";
 import { clock, useGame } from "@/game/store";
 import { bunkerCapacity, frontCities } from "@/game/engine";
-import type { Blast, City, Facility, Flight, Front, Game, Missile } from "@/game/types";
+import type { NationId, Blast, City, Facility, Flight, Front, Game, Missile } from "@/game/types";
 
 const VEC = "#3fd0c9"; // Vektorlinien
 const HOSTILE = "#ff4b3e";
@@ -126,9 +127,7 @@ function Dynamic() {
     f.type === "mine" || f.type === "factory" ? layers.economy : layers.military;
   return (
     <group>
-      {g.cities.map((c) => (
-        <Territory key={`t-${c.id}`} c={c} color={g.nations[c.nation].alive ? g.nations[c.nation].color : "#3a3a3a"} capital={c.capital} dead={!g.nations[c.nation].alive} />
-      ))}
+      <CountryFill g={g} />
       {g.cities.map((c) => (
         <CityMarker key={c.id} g={g} c={c} labels={layers.civil} selected={selected?.id === c.id} />
       ))}
@@ -160,22 +159,43 @@ function Dynamic() {
   );
 }
 
-function Territory({ c, color, capital, dead }: { c: City; color: string; capital: boolean; dead: boolean }) {
-  const pos = useMemo(() => ll(c.lat, c.lon, 1.0012), [c.lat, c.lon]);
-  const q = useSurfaceQuat(c.lat, c.lon);
-  const r = capital ? 0.2 : 0.13;
+function CountryFill({ g }: { g: Game }) {
+  const key = Object.values(g.nations).map((n) => `${n.id}${n.alive ? 1 : 0}`).join();
+  const tex = useMemo(() => {
+    const W = 2048, H = 1024;
+    const cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext("2d")!;
+    for (const [id, rings] of countries as unknown as [NationId, number[][][]][]) {
+      const n = g.nations[id];
+      ctx.fillStyle = n.alive ? n.color : "#3a3a3a";
+      ctx.globalAlpha = n.alive ? (id === g.playerId ? 0.55 : 0.4) : 0.6;
+      for (const off of [-360, 0, 360]) {
+        ctx.beginPath();
+        for (const r of rings) {
+          let prev = r[0]![0]!, lon = prev;
+          r.forEach(([x, y], i) => {
+            let dx = x! - prev; if (dx > 180) dx -= 360; if (dx < -180) dx += 360;
+            lon = i === 0 ? x! : lon + dx; prev = x!;
+            const px = ((lon + off + 180) / 360) * W, py = ((90 - y!) / 180) * H;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          });
+          ctx.closePath();
+        }
+        ctx.fill("evenodd");
+      }
+    }
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return (
-    <group position={pos} quaternion={q}>
-      <mesh rotation-x={-Math.PI / 2}>
-        <circleGeometry args={[r, 40]} />
-        <meshBasicMaterial color={color} transparent opacity={dead ? 0.35 : 0.22} depthWrite={false} side={THREE.DoubleSide} />
-      </mesh>
-      {dead && capital && (
-        <Html position={[0, 0.03, 0]} center zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
-          <div className="globe-label" style={{ color: "#ff4b3e" }}>✕ ZERSTÖRT</div>
-        </Html>
-      )}
-    </group>
+    <mesh>
+      <sphereGeometry args={[1.0012, 96, 96]} />
+      <meshBasicMaterial map={tex} transparent depthWrite={false} />
+    </mesh>
   );
 }
 
