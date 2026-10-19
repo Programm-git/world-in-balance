@@ -4,7 +4,7 @@ import { step } from "./engine";
 import { audio } from "./audio";
 import type { Game, Layer, NationId } from "./types";
 
-export type Tab = "economy" | "civil" | "military" | "research" | "diplomacy";
+export type Tab = "civil" | "military" | "research";
 export interface Selection {
   kind: "city" | "facility";
   id: string;

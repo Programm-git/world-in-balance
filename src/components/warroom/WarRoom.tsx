@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { Button, type ButtonProps } from "@/components/ui/button";
+import { Crosshair, FlaskConical, Shield, Minus, Plus } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { Globe } from "./Globe";
 import { NATION_DEFS, NATION_ORDER } from "@/game/data";
-import { startLoop, useGame, type Tab } from "@/game/store";
+import { startLoop, useGame } from "@/game/store";
 import { audio } from "@/game/audio";
 import {
   BUILD, RESEARCH, REBELLION_WARNING, MAX_RESEARCH, bunkerCapacity, bunkerCost, citiesOf, declareWar,
@@ -14,22 +16,29 @@ import type { Layer, NationId, QueueItemKind, ResearchKey } from "@/game/types";
 const fmt = (n: number, d = 0) => n.toLocaleString("de-DE", { maximumFractionDigits: d, minimumFractionDigits: d });
 const err = (e: string | null | undefined) => { if (e) toast.error(e); else audio.click(); };
 
+function useActiveGame() {
+  const g = useGame((s) => s.g);
+  if (!g) throw new Error("Keine aktive Partie");
+  return g;
+}
+
+function HudButton({ className = "", ...props }: ButtonProps) {
+  return <Button variant="ghost" className={`h-auto min-h-8 whitespace-normal rounded-sm ${className}`} {...props} />;
+}
+
 export function WarRoom() {
   const g = useGame((s) => s.g);
   useEffect(() => startLoop(), []);
   if (!g) return <StartScreen />;
   return (
-    <div className="warroom grid h-screen grid-rows-[auto_1fr_auto] overflow-hidden bg-background text-foreground">
+    <div className="warroom grid min-h-screen grid-rows-[auto_1fr_auto] lg:h-screen lg:overflow-hidden bg-background text-foreground">
       <Toaster theme="dark" position="top-center" />
       <TopBar />
-      <div className="grid min-h-0 grid-cols-[260px_1fr_290px]">
-        <LeftMonitor />
-        <div className="relative min-h-0">
+      <div className="relative min-h-0">
+        <div className="relative h-[320px] min-h-0 lg:h-full">
           <Globe />
           <LayerToggles />
-          <TargetCard />
         </div>
-        <RightMonitor />
       </div>
       <Desk />
       {g.status !== "playing" && <EndScreen />}
@@ -56,15 +65,15 @@ function Bar({ v, tone }: { v: number; tone: string }) {
 
 function TopBar() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const act = useGame((s) => s.act);
   const p = g.nations[g.playerId];
   const pop = nationPop(g, p.id);
   const mTone = p.morale < REBELLION_WARNING ? "bg-hud-red" : p.morale < 45 ? "bg-hud-amber" : "bg-hud-green";
   return (
-    <header className="flex items-center gap-6 border-b border-border bg-card px-4 py-2 text-xs">
+    <header className="flex items-center gap-4 overflow-x-auto border-b border-border bg-card px-4 py-2 text-xs [&>div]:shrink-0">
       <div>
-        <div className="font-display text-lg leading-none tracking-widest" style={{ color: p.color }}>{p.name.toUpperCase()}</div>
+        <div className="font-display text-lg leading-none tracking-normal" style={{ color: p.color }}>{p.name.toUpperCase()}</div>
         <div className="text-muted-foreground">Situationszentrum</div>
       </div>
       <Stat label="Bevölkerung" value={`${fmt(pop, 1)} Mio`} />
@@ -81,9 +90,9 @@ function TopBar() {
       <div className="ml-auto flex items-center gap-1">
         <span className="mr-1 text-muted-foreground">DEFCON</span>
         {[5, 4, 3, 2, 1].map((d) => (
-          <button key={d} onClick={() => act((g) => { g.nations[g.playerId].defcon = d; })}
+          <HudButton key={d} onClick={() => act((g) => { g.nations[g.playerId].defcon = d; })}
             className={`h-8 w-8 border font-display text-base ${p.defcon === d ? "defcon-on border-transparent" : "border-border text-muted-foreground hover:text-foreground"}`}
-            data-level={d}>{d}</button>
+            data-level={d}>{d}</HudButton>
         ))}
       </div>
     </header>
@@ -96,16 +105,16 @@ function Stat({ label, value, tone = "" }: { label: string; value: string; tone?
 
 function LeftMonitor() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const select = useGame((s) => s.select);
   const p = g.nations[g.playerId];
   return (
-    <aside className="min-h-0 space-y-2 overflow-y-auto border-r border-border p-2">
+    <aside className="min-h-0 space-y-2">
       <Panel title="Zivilschutz · Städte">
         {citiesOf(g, p.id).map((c) => {
           const cap = bunkerCapacity(g, c);
           return (
-            <button key={c.id} onClick={() => select({ kind: "city", id: c.id })} className="mb-2 block w-full text-left text-xs">
+            <HudButton key={c.id} onClick={() => select({ kind: "city", id: c.id })} className="mb-2 block w-full text-left text-xs">
               <div className="flex justify-between">
                 <span className={c.ruined ? "text-muted-foreground line-through" : ""}>{c.capital ? "★ " : ""}{c.name}</span>
                 <span className="text-muted-foreground">{fmt(c.pop, 1)} Mio</span>
@@ -116,7 +125,7 @@ function LeftMonitor() {
               </div>
               <Bar v={c.pop ? (c.sheltered / c.pop) * 100 : 0} tone="bg-hud-green" />
               {p.morale < 25 ? <div className="text-[10px] text-hud-red">STREIK</div> : c.unrest > 40 ? <div className="text-[10px] text-hud-amber">Unruhen {fmt(c.unrest)}%</div> : null}
-            </button>
+            </HudButton>
           );
         })}
       </Panel>
@@ -126,12 +135,12 @@ function LeftMonitor() {
 
 function RightMonitor() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const p = g.nations[g.playerId];
   const incoming = g.missiles.filter((m) => m.targetNation === p.id && m.detected);
   const bombers = g.flights.filter((f) => f.targetNation === p.id && f.phase === "out");
   return (
-    <aside className="min-h-0 space-y-2 overflow-y-auto border-l border-border p-2 text-xs">
+    <aside className="grid min-h-0 gap-3 text-xs sm:grid-cols-2">
       <Panel title="Radar · Frühwarnung">
         {incoming.length === 0 && bombers.length === 0 && <div className="text-muted-foreground">Luftraum ruhig.</div>}
         {incoming.map((m) => (
@@ -182,7 +191,7 @@ function LayerToggles() {
   return (
     <div className="absolute left-1/2 top-3 flex -translate-x-1/2 gap-1">
       {L.map(([k, l]) => (
-        <button key={k} onClick={() => toggle(k)} className={`hud-btn ${layers[k] ? "hud-btn-on" : ""}`}>{l}</button>
+        <HudButton key={k} onClick={() => toggle(k)} className={`hud-btn ${layers[k] ? "hud-btn-on" : ""}`}>{l}</HudButton>
       ))}
     </div>
   );
@@ -190,37 +199,37 @@ function LayerToggles() {
 
 function TargetCard() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const sel = useGame((s) => s.selected);
   const act = useGame((s) => s.act);
   const [n, setN] = useState(3);
-  if (!sel) return <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">Ziel auf dem Globus anklicken · Ziehen zum Drehen · Mausrad zum Zoomen</div>;
+  if (!sel) return <div className="border-l-2 border-hud-teal py-2 pl-3 text-muted-foreground">Kein Angriffsziel ausgewählt.</div>;
   const t = targetPos(g, sel.kind, sel.id);
   if (!t) return null;
   const p = g.nations[g.playerId];
   const own = t.nation === g.playerId;
   const city = sel.kind === "city" ? g.cities.find((c) => c.id === sel.id) : null;
   return (
-    <div className="hud-panel absolute bottom-3 left-1/2 w-[420px] -translate-x-1/2 text-xs">
+    <div className="border-l-2 border-hud-teal pl-3 text-xs">
       <div className="flex justify-between">
         <span className="font-display text-base">{t.name}</span>
         <span style={{ color: g.nations[t.nation].color }}>{g.nations[t.nation].name}</span>
       </div>
       {city && <div className="text-muted-foreground">{fmt(city.pop, 1)} Mio Einwohner · Bunkerstufe {city.bunkerLevel}</div>}
       {own ? (
-        city && <button className="hud-btn mt-2" onClick={() => err(act((g) => enqueue(g, "bunker", city.id)))}>Bunker ausbauen ({bunkerCost(city.bunkerLevel)} Stahl)</button>
+        city && <HudButton className="hud-btn mt-2" onClick={() => err(act((g) => enqueue(g, "bunker", city.id)))}>Bunker ausbauen ({bunkerCost(city.bunkerLevel)} Stahl)</HudButton>
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button className="hud-btn" onClick={() => setN(Math.max(1, n - 1))}>−</button>
+          <HudButton className="hud-btn" aria-label="Weniger Bomber" onClick={() => setN(Math.max(1, n - 1))}><Minus /></HudButton>
           <span>{n}</span>
-          <button className="hud-btn" onClick={() => setN(n + 1)}>+</button>
-          <button className="hud-btn" disabled={p.defcon > 3} onClick={() => err(act((g) => sendBombers(g, g.playerId, sel.kind, sel.id, n)))}>
-            Bomberangriff {p.defcon > 3 && "(DEFCON ≤3)"}
-          </button>
-          <button className="hud-btn hud-btn-danger" disabled={p.defcon > 1 || !g.launchArmed}
+          <HudButton className="hud-btn" aria-label="Mehr Bomber" onClick={() => setN(n + 1)}><Plus /></HudButton>
+          <HudButton className="hud-btn" disabled={p.defcon > 3} onClick={() => err(act((g) => sendBombers(g, g.playerId, sel.kind, sel.id, n)))}>
+            Konventioneller Bomberangriff {p.defcon > 3 && "(DEFCON ≤3)"}
+          </HudButton>
+          <HudButton className="hud-btn hud-btn-danger" disabled={p.defcon > 1 || !g.launchArmed}
             onClick={() => err(act((g) => launchMissile(g, g.playerId, sel.kind, sel.id)))}>
-            ☢ Atomschlag {(p.defcon > 1 || !g.launchArmed) && "(DEFCON 1 + Freigabe)"}
-          </button>
+            ☢ Atomrakete starten {(p.defcon > 1 || !g.launchArmed) && "(DEFCON 1 + Freigabe)"}
+          </HudButton>
         </div>
       )}
     </div>
@@ -230,37 +239,71 @@ function TargetCard() {
 function Desk() {
   const tab = useGame((s) => s.tab);
   const setTab = useGame((s) => s.setTab);
-  const tabs: [Tab, string][] = [["economy", "Wirtschaft"], ["civil", "Zivilschutz"], ["military", "Militär"], ["research", "Forschung"], ["diplomacy", "Diplomatie"]];
+  const tabs = [
+    { key: "research" as const, label: "Forschung", Icon: FlaskConical },
+    { key: "military" as const, label: "Kriegsführung", Icon: Crosshair },
+    { key: "civil" as const, label: "Zivil", Icon: Shield },
+  ];
   return (
-    <footer className="desk grid h-[250px] grid-cols-[1fr_220px_320px] gap-2 border-t border-border p-2">
-      <div className="hud-panel flex min-h-0 flex-col">
-        <div className="mb-2 flex gap-1">
-          {tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`hud-btn ${tab === k ? "hud-btn-on" : ""}`}>{l}</button>)}
+    <footer className="desk border-t border-border bg-card lg:h-[410px]">
+      <div className="grid min-h-0 lg:h-full lg:grid-cols-[1fr_280px]">
+        <div className="flex min-h-0 min-w-0 flex-col">
+          <div className="grid shrink-0 grid-cols-3 border-b border-border" role="tablist" aria-label="Kontrollraum">
+            {tabs.map(({ key, label, Icon }) => <HudButton key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)} className={`min-h-12 rounded-none ${tab === key ? "hud-btn-on" : "text-muted-foreground"}`}><Icon /><span>{label}</span></HudButton>)}
+          </div>
+          <div role="tabpanel" aria-label={tabs.find((t) => t.key === tab)?.label} className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 text-xs">
+            {tab === "research" && <Research />}
+            {tab === "military" && <><CommandSection title="Angriffe"><AttackOrders /></CommandSection><CommandSection title="Rüstung & Mobilisierung"><Military /></CommandSection><CommandSection title="Diplomatie"><Diplomacy /></CommandSection><CommandSection title="Lage & Bereitschaft"><RightMonitor /></CommandSection></>}
+            {tab === "civil" && <><CommandSection title="Evakuierung"><Emergency kind="civil" /></CommandSection><CommandSection title="Bunker ausbauen"><Civil /></CommandSection><CommandSection title="Städte & Bevölkerung"><LeftMonitor /></CommandSection><CommandSection title="Wirtschaft & Infrastruktur"><Economy /></CommandSection></>}
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto text-xs">
-          {tab === "economy" && <Economy />}
-          {tab === "civil" && <Civil />}
-          {tab === "military" && <Military />}
-          {tab === "research" && <Research />}
-          {tab === "diplomacy" && <Diplomacy />}
-        </div>
+        <div className="min-h-0 border-t border-border p-3 lg:border-l lg:border-t-0"><TimeAndLog /></div>
       </div>
-      <Emergency />
-      <TimeAndLog />
     </footer>
   );
+}
+
+function CommandSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section><h3 className="hud-title mb-2">{title}</h3>{children}</section>;
+}
+
+function AttackOrders() {
+  useGame((s) => s.ver);
+  const g = useActiveGame();
+  const selected = useGame((s) => s.selected);
+  const select = useGame((s) => s.select);
+  const act = useGame((s) => s.act);
+  const p = g.nations[g.playerId];
+  const targets = [
+    ...g.cities.filter((c) => c.nation !== p.id && !c.ruined && g.nations[c.nation].alive).map((c) => ({ ...c, kind: "city" as const })),
+    ...g.facilities.filter((f) => f.nation !== p.id && f.hp > 0 && g.nations[f.nation].alive).map((f) => ({ ...f, kind: "facility" as const })),
+  ];
+  return <div className="space-y-3">
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="flex min-w-0 flex-1 flex-col gap-1 text-muted-foreground">Angriffsziel
+        <select aria-label="Angriffsziel" className="h-10 w-full min-w-0 rounded-sm border border-border bg-background px-2 text-foreground" value={selected ? `${selected.kind}:${selected.id}` : ""} onChange={(e) => { const target = targets.find((t) => `${t.kind}:${t.id}` === e.target.value); select(target ? { kind: target.kind, id: target.id } : null); }}>
+          <option value="">Ziel auswählen</option>
+          {targets.map((t) => <option key={`${t.kind}:${t.id}`} value={`${t.kind}:${t.id}`}>{g.nations[t.nation].name} · {t.name}</option>)}
+        </select>
+      </label>
+      <div><div className="mb-1 text-muted-foreground">DEFCON</div><div className="flex gap-1">{[5,4,3,2,1].map((d) => <HudButton key={d} aria-label={`DEFCON ${d}`} aria-pressed={p.defcon === d} className={`hud-btn h-10 w-10 ${p.defcon === d ? "defcon-on" : ""}`} data-level={d} onClick={() => act((g) => { g.nations[g.playerId].defcon = d; })}>{d}</HudButton>)}</div></div>
+    </div>
+    <TargetCard />
+    <div className="flex flex-wrap gap-x-6 gap-y-1 text-muted-foreground"><span>Bomber: {fmt(p.bombers)}</span><span>Atomraketen: {fmt(p.warheads)}</span><span>Abfangraketen: {fmt(p.interceptors)} · automatische Verteidigung</span></div>
+    <Emergency kind="military" />
+  </div>;
 }
 
 function BuildBtn({ k }: { k: QueueItemKind }) {
   const act = useGame((s) => s.act);
   const b = BUILD[k];
   const c = Object.entries(b.cost).map(([r, v]) => `${v} ${r === "steel" ? "Stahl" : r === "uranium" ? "kg U" : "Energie"}`).join(", ");
-  return <button className="hud-btn text-left" onClick={() => err(act((g) => enqueue(g, k)))}>{b.label}<div className="text-[10px] text-muted-foreground">{c} · {b.ticks}h</div></button>;
+  return <HudButton className="hud-btn text-left" onClick={() => err(act((g) => enqueue(g, k)))}>{b.label}<div className="text-[10px] text-muted-foreground">{c} · {b.ticks}h</div></HudButton>;
 }
 
 function Queue() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const lanes = Math.max(1, facilitiesOf(g, g.playerId, "factory").length);
   return (
     <div className="mt-2">
@@ -275,11 +318,11 @@ function Queue() {
 
 function Economy() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       <div>
-        <div className="grid grid-cols-3 gap-1"><BuildBtn k="mine" /><BuildBtn k="factory" /><BuildBtn k="silo" /></div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3"><BuildBtn k="mine" /><BuildBtn k="factory" /><BuildBtn k="silo" /></div>
         <Queue />
       </div>
       <div>
@@ -293,15 +336,15 @@ function Economy() {
 
 function Civil() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const act = useGame((s) => s.act);
   return (
-    <div className="grid grid-cols-3 gap-1">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {citiesOf(g, g.playerId).map((c) => (
-        <button key={c.id} className="hud-btn text-left" onClick={() => err(act((g) => enqueue(g, "bunker", c.id)))}>
+        <HudButton key={c.id} className="hud-btn text-left" onClick={() => err(act((g) => enqueue(g, "bunker", c.id)))}>
           {c.name} · Stufe {c.bunkerLevel}/5
           <div className="text-[10px] text-muted-foreground">Ausbau {bunkerCost(c.bunkerLevel)} Stahl · Kapazität {fmt(bunkerCapacity(g, c), 1)} Mio</div>
-        </button>
+        </HudButton>
       ))}
     </div>
   );
@@ -310,32 +353,32 @@ function Civil() {
 function Military() {
   const act = useGame((s) => s.act);
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       <div className="grid grid-cols-2 gap-1">
         <BuildBtn k="fighter" /><BuildBtn k="bomber" /><BuildBtn k="interceptor" /><BuildBtn k="warhead" />
-        <button className="hud-btn col-span-2" onClick={() => act((g) => mobilize(g))}>Generalmobilmachung (+20% Truppen, −4 Moral)</button>
+        <HudButton className="hud-btn col-span-2" onClick={() => act((g) => mobilize(g))}>Generalmobilmachung (+20% Truppen, −4 Moral)</HudButton>
       </div>
-      <div><Queue /><p className="mt-2 text-muted-foreground">Bomber brauchen DEFCON 3, Atomschläge DEFCON 1 und die Abschussfreigabe. Ziel auf dem Globus wählen.</p></div>
+      <div><Queue /></div>
     </div>
   );
 }
 
 function Research() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const act = useGame((s) => s.act);
   const p = g.nations[g.playerId];
   return (
-    <div className="grid grid-cols-5 gap-1">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-5">
       {(Object.keys(RESEARCH) as ResearchKey[]).map((k) => {
         const lvl = p.research[k];
         const active = p.researching?.key === k;
         return (
-          <button key={k} className={`hud-btn text-left ${active ? "hud-btn-on" : ""}`} onClick={() => err(act((g) => startResearch(g, k)))}>
+          <HudButton key={k} className={`hud-btn text-left ${active ? "hud-btn-on" : ""}`} onClick={() => err(act((g) => startResearch(g, k)))}>
             {RESEARCH[k].label} {lvl}/{MAX_RESEARCH}
             <div className="text-[10px] text-muted-foreground">{RESEARCH[k].desc}</div>
             {active && p.researching ? <Bar v={(1 - p.researching.remaining / p.researching.total) * 100} tone="bg-hud-teal" /> : lvl < MAX_RESEARCH && <div className="text-[10px]">{researchCost(lvl)} Energie</div>}
-          </button>
+          </HudButton>
         );
       })}
     </div>
@@ -344,7 +387,7 @@ function Research() {
 
 function Diplomacy() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const act = useGame((s) => s.act);
   const p = g.nations[g.playerId];
   return (
@@ -352,8 +395,8 @@ function Diplomacy() {
       {g.offers.map((o) => (
         <div key={o.id} className="mb-1 flex items-center gap-2 text-hud-amber">
           {g.nations[o.from].name}: {o.kind === "peace" ? "Waffenstillstand" : "Bündnis"}?
-          <button className="hud-btn" onClick={() => act((g) => respondOffer(g, o.id, true))}>Annehmen</button>
-          <button className="hud-btn" onClick={() => act((g) => respondOffer(g, o.id, false))}>Ablehnen</button>
+          <HudButton className="hud-btn" onClick={() => act((g) => respondOffer(g, o.id, true))}>Annehmen</HudButton>
+          <HudButton className="hud-btn" onClick={() => act((g) => respondOffer(g, o.id, false))}>Ablehnen</HudButton>
         </div>
       ))}
       {Object.values(g.nations).filter((n) => !n.isPlayer).map((n) => {
@@ -363,9 +406,9 @@ function Diplomacy() {
             <span className="w-48" style={{ color: n.color }}>{n.name}</span>
             <span className="w-28">{!n.alive ? `✝ ${n.defeatedReason}` : war ? <b className="text-hud-red">KRIEG</b> : ally ? <span className="text-hud-green">Verbündet</span> : "Neutral"}</span>
             {n.alive && <span className="w-24 text-muted-foreground">Moral {fmt(n.morale)}%</span>}
-            {n.alive && !war && <button className="hud-btn" onClick={() => act((g) => declareWar(g, g.playerId, n.id as NationId))}>Krieg erklären</button>}
-            {n.alive && war && <button className="hud-btn" onClick={() => act((g) => proposePeace(g, n.id))}>Frieden anbieten</button>}
-            {n.alive && !war && !ally && <button className="hud-btn" onClick={() => act((g) => proposeAlliance(g, n.id))}>Bündnis anbieten</button>}
+            {n.alive && !war && <HudButton className="hud-btn" onClick={() => act((g) => declareWar(g, g.playerId, n.id as NationId))}>Krieg erklären</HudButton>}
+            {n.alive && war && <HudButton className="hud-btn" onClick={() => act((g) => proposePeace(g, n.id))}>Frieden anbieten</HudButton>}
+            {n.alive && !war && !ally && <HudButton className="hud-btn" onClick={() => act((g) => proposeAlliance(g, n.id))}>Bündnis anbieten</HudButton>}
           </div>
         );
       })}
@@ -373,35 +416,34 @@ function Diplomacy() {
   );
 }
 
-function Emergency() {
+function Emergency({ kind }: { kind: "civil" | "military" }) {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const act = useGame((s) => s.act);
   return (
-    <div className="hud-panel flex flex-col gap-2">
-      <h3 className="hud-title">Notfall-Auslöser</h3>
-      <button onClick={() => { audio.init(); act((g) => { g.siren = !g.siren; }); }}
+    <div className="flex flex-col gap-2">
+      {kind === "civil" && <HudButton onClick={() => { audio.init(); act((g) => { g.siren = !g.siren; }); }}
         className={`emergency ${g.siren ? "emergency-on animate-pulse" : ""}`}>
         {g.siren ? "SIRENEN AKTIV · Evakuierung" : "Zivilschutz-Sirenen"}
-      </button>
-      <button onClick={() => { audio.init(); act((g) => { g.launchArmed = !g.launchArmed; }); }}
+      </HudButton>}
+      {kind === "military" && <HudButton onClick={() => { audio.init(); act((g) => { g.launchArmed = !g.launchArmed; }); }}
         className={`emergency emergency-red ${g.launchArmed ? "emergency-on" : ""}`}>
-        {g.launchArmed ? "☢ ABSCHUSS FREIGEGEBEN" : "Raketen-Abschussfreigabe"}
-      </button>
+        {g.launchArmed ? "☢ ATOMRAKETEN FREIGEGEBEN" : "Atomraketen-Abschussfreigabe"}
+      </HudButton>}
     </div>
   );
 }
 
 function TimeAndLog() {
   useGame((s) => s.ver);
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const { speed, paused, setSpeed, togglePause } = useGame();
   const d = hourToDate(g.tick);
   return (
-    <div className="hud-panel flex min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-1">
-        <button className="hud-btn" onClick={() => { audio.init(); togglePause(); }}>{paused ? "▶" : "❚❚"}</button>
-        {[1, 2, 5].map((s) => <button key={s} className={`hud-btn ${!paused && speed === s ? "hud-btn-on" : ""}`} onClick={() => { audio.init(); setSpeed(s); }}>{s}x</button>)}
+        <HudButton className="hud-btn" onClick={() => { audio.init(); togglePause(); }}>{paused ? "▶" : "❚❚"}</HudButton>
+        {[1, 2, 5].map((s) => <HudButton key={s} className={`hud-btn ${!paused && speed === s ? "hud-btn-on" : ""}`} onClick={() => { audio.init(); setSpeed(s); }}>{s}x</HudButton>)}
         <div className="ml-auto text-right font-display">
           <div>{d.toLocaleDateString("de-DE")}</div>
           <div className="text-xs text-muted-foreground">{String(d.getUTCHours()).padStart(2, "0")}:00 Zulu</div>
@@ -422,14 +464,14 @@ function StartScreen() {
   const start = useGame((s) => s.start);
   return (
     <div className="warroom flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-8 text-foreground">
-      <h1 className="font-display text-5xl tracking-[0.3em] text-hud-amber">SITUATIONSZENTRUM</h1>
+      <h1 className="font-display text-3xl sm:text-5xl text-hud-amber">SITUATIONSZENTRUM</h1>
       <p className="max-w-xl text-center text-sm text-muted-foreground">Wählen Sie Ihre Nation. Schützen Sie Ihr Volk, halten Sie die Moral und überstehen Sie die Eskalation zum Weltkrieg.</p>
       <div className="grid max-w-5xl grid-cols-2 gap-3 md:grid-cols-4">
         {NATION_ORDER.map((id) => (
-          <button key={id} onClick={() => { audio.init(); start(id); }} className="hud-panel text-left hover:border-hud-amber">
+          <HudButton key={id} onClick={() => { audio.init(); start(id); }} className="hud-panel text-left hover:border-hud-amber">
             <div className="font-display text-lg" style={{ color: NATION_DEFS[id].color }}>{NATION_DEFS[id].name}</div>
             <div className="text-xs text-muted-foreground">{NATION_DEFS[id].blurb}</div>
-          </button>
+          </HudButton>
         ))}
       </div>
     </div>
@@ -437,15 +479,15 @@ function StartScreen() {
 }
 
 function EndScreen() {
-  const g = useGame((s) => s.g)!;
+  const g = useActiveGame();
   const reset = useGame((s) => s.reset);
   const won = g.status === "won";
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/80">
-      <h2 className={`font-display text-6xl tracking-widest ${won ? "text-hud-green" : "text-hud-red"}`}>{won ? "SIEG" : "NIEDERLAGE"}</h2>
+      <h2 className={`font-display text-6xl tracking-normal ${won ? "text-hud-green" : "text-hud-red"}`}>{won ? "SIEG" : "NIEDERLAGE"}</h2>
       <p>{g.endReason}</p>
       <p className="text-sm text-muted-foreground">Gefallene: {fmt(nationDead(g, g.playerId), 2)} Mio · Tage im Amt: {Math.floor(g.tick / 24)}</p>
-      <button className="hud-btn hud-btn-on" onClick={reset}>Neues Spiel</button>
+      <HudButton className="hud-btn hud-btn-on" onClick={reset}>Neues Spiel</HudButton>
     </div>
   );
 }
