@@ -32,7 +32,7 @@ export function WarRoom() {
   if (!g) return <StartScreen />;
   return (
     <div className="warroom grid min-h-screen grid-rows-[auto_1fr_auto] lg:h-screen lg:overflow-hidden bg-background text-foreground">
-      <Toaster theme="dark" position="top-center" />
+      <div className="fixed z-50"><Toaster theme="dark" position="top-center" /></div>
       <TopBar />
       <div className="relative min-h-0">
         <div className="relative h-[320px] min-h-0 lg:h-full">

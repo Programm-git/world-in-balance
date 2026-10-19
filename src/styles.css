@@ -185,3 +185,13 @@
 .defcon-on[data-level="2"], .defcon-on[data-level="1"] { background: var(--hud-red); }
 .globe-label { font-family: var(--font-mono); font-size: 10px; white-space: nowrap; transform: translateY(-12px); text-shadow: 0 0 4px var(--background); }
 .font-display { font-family: var(--font-display); }
+.warroom { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.warroom > header { min-width: 0; }
+.desk { min-width: 0; }
+.hud-btn { white-space: normal; }
+.emergency { min-height: 44px; padding: 0.5rem; }
+.hud-title { letter-spacing: 0; }
+@media (max-width: 1023px) {
+  .warroom { grid-template-rows: auto auto auto; }
+  .desk [role="tab"] { gap: 0.3rem; padding-left: 0.25rem; padding-right: 0.25rem; font-size: 0.7rem; }
+}

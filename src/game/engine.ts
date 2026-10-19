@@ -451,6 +451,7 @@ function aiTurn(g: Game, n: Nation) {
   const buys: QueueItemKind[] = ["interceptor", "fighter", "bomber", "interceptor"];
   for (let i = 0; i < 2; i++) {
     const k = buys[Math.floor(rand() * buys.length)];
+    if (!k) continue;
     const cost = BUILD[k].cost;
     if (canAfford(n, cost)) {
       pay(n, cost);
@@ -491,9 +492,12 @@ function aiTurn(g: Game, n: Nation) {
     const sum = weights.reduce((a, b) => a + b, 0);
     let r = rand() * sum;
     for (let i = 0; i < others.length; i++) {
-      r -= weights[i]!;
+      const weight = weights[i];
+      const other = others[i];
+      if (weight === undefined || !other) continue;
+      r -= weight;
       if (r <= 0) {
-        declareWar(g, n.id, others[i]!.id);
+        declareWar(g, n.id, other.id);
         break;
       }
     }
@@ -509,7 +513,8 @@ function aiTurn(g: Game, n: Nation) {
         !n.wars.includes(o.id) &&
         o.wars.some((w) => n.wars.includes(w)),
     );
-    if (cand.length) makeAlliance(g, n.id, cand[0].id);
+    const candidate = cand[0];
+    if (candidate) makeAlliance(g, n.id, candidate.id);
   }
   // Angebote an Spieler
   const P = g.playerId;
@@ -544,7 +549,7 @@ function aiTurn(g: Game, n: Nation) {
         if (c) sendBombers(g, n.id, "city", c.id, Math.ceil(n.bombers * 0.4));
       } else {
         const f = facs[Math.floor(rand() * facs.length)];
-        sendBombers(g, n.id, "facility", f.id, Math.ceil(n.bombers * 0.4));
+        if (f) sendBombers(g, n.id, "facility", f.id, Math.ceil(n.bombers * 0.4));
       }
     }
     if (
@@ -554,7 +559,8 @@ function aiTurn(g: Game, n: Nation) {
       rand() < (g.escalation / 100) * 0.05 * n.aggression * mult
     ) {
       const silos = facilitiesOf(g, w, "silo");
-      if (silos.length && rand() < 0.5) launchMissile(g, n.id, "facility", silos[0].id);
+      const silo = silos[0];
+      if (silo && rand() < 0.5) launchMissile(g, n.id, "facility", silo.id);
       else {
         const cs = citiesOf(g, w).sort((a, b) => b.pop - a.pop);
         const c = rand() < 0.4 ? cs.find((x) => x.capital) : cs[0];
